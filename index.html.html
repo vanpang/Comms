@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Work Tracker</title>
+<style>
+  :root{
+    --ink:#1b1f23;
+    --paper:#f6f5f2;
+    --line:#d8d5cd;
+    --line-strong:#b6b2a6;
+    --co:#2f5d8a;
+    --co-bg:#e8f0f8;
+    --aileen:#8a4a2f;
+    --aileen-bg:#f8ede6;
+    --hq:#4a6741;
+    --hq-bg:#eaf1e6;
+    --overdue:#a3312a;
+    --overdue-bg:#fbe9e7;
+    --due-soon:#8a6d1f;
+    --due-soon-bg:#faf3d9;
+    --done:#4a7a53;
+    --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+    --serif: 'Source Serif Pro', Georgia, serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  header{
+    border-bottom:2px solid var(--ink);
+    padding:28px 32px 18px;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  header h1{
+    font-family:var(--serif);
+    font-size:28px;
+    margin:0;
+    letter-spacing:-0.01em;
+  }
+  header .tagline{
+    font-family:var(--mono);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:#6b6a63;
+    margin-top:4px;
+  }
+  .counts{
+    display:flex;
+    gap:18px;
+    font-family:var(--mono);
+    font-size:12px;
+    color:#6b6a63;
+  }
+  .counts b{
+    display:block;
+    font-size:20px;
+    color:var(--ink);
+    font-family:var(--serif);
+  }
+  main{
+    max-width:1180px;
+    margin:0 auto;
+    padding:24px 32px 60px;
+  }
+  .toolbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:14px;
+    margin-bottom:18px;
+  }
+  .filters{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .filter-btn{
+    font-family:var(--mono);
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    background:transparent;
+    border:1px solid var(--line-strong);
+    color:var(--ink);
+    padding:7px 12px;
+    cursor:pointer;
+    border-radius:3px;
+  }
+  .filter-btn.active{
+    background:var(--ink);
+    color:var(--paper);
+    border-color:var(--ink);
+  }
+  .add-btn{
+    font-family:var(--mono);
+    font-size:13px;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    padding:10px 18px;
+    border-radius:3px;
+    cursor:pointer;
+    letter-spacing:0.02em;
+  }
+  .add-btn:hover{opacity:0.85;}
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    background:#fff;
+    border:1px solid var(--line);
+  }
+  thead th{
+    text-align:left;
+    font-family:var(--mono);
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:#6b6a63;
+    padding:10px 14px;
+    border-bottom:2px solid var(--ink);
+    cursor:pointer;
+    user-select:none;
+    white-space:nowrap;
+  }
+  thead th:hover{color:var(--ink);}
+  tbody tr{
+    border-bottom:1px solid var(--line);
+    transition:background 0.15s;
+  }
+  tbody tr:hover{background:#faf9f7;}
+  tbody tr.done{opacity:0.5;}
+  tbody tr.done .work-title{text-decoration:line-through;}
+  td{
+    padding:12px 14px;
+    vertical-align:top;
+    font-size:14px;
+  }
+  td.due{
+    font-family:var(--mono);
+    font-size:12.5px;
+    white-space:nowrap;
+    width:180px;
+  }
+  .due-badge{
+    display:inline-block;
+    padding:3px 8px;
+    border-radius:3px;
+    font-weight:600;
+  }
+  .due-badge.overdue{background:var(--overdue-bg);color:var(--overdue);}
+  .due-badge.soon{background:var(--due-soon-bg);color:var(--due-soon);}
+  .due-badge.tbc{background:#eceae4;color:#6b6a63;font-style:italic;}
+  .due-badge.normal{color:#4a4944;}
+  .work-title{
+    font-weight:600;
+    margin-bottom:3px;
+  }
+  .info{
+    color:#5c5a53;
+    font-size:13px;
+    line-height:1.4;
+    max-width:420px;
+  }
+  td.assignee{width:100px;}
+  .tag{
+    display:inline-block;
+    font-family:var(--mono);
+    font-size:11px;
+    font-weight:700;
+    padding:4px 9px;
+    border-radius:3px;
+    letter-spacing:0.03em;
+  }
+  .tag.CO{background:var(--co-bg);color:var(--co);}
+  .tag.Aileen{background:var(--aileen-bg);color:var(--aileen);}
+  .tag.HQ{background:var(--hq-bg);color:var(--hq);}
+  td.actions{
+    width:90px;
+    text-align:right;
+    white-space:nowrap;
+  }
+  td.actions button{
+    background:none;
+    border:none;
+    cursor:pointer;
+    font-size:15px;
+    padding:4px 6px;
+    color:#8a8880;
+    border-radius:3px;
+  }
+  td.actions button:hover{color:var(--ink);background:var(--line);}
+  .empty-row td{
+    text-align:center;
+    padding:50px 20px;
+    color:#8a8880;
+    font-family:var(--mono);
+    font-size:13px;
+  }
+
+  /* Modal */
+  .overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(27,31,35,0.45);
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    padding:20px;
+  }
+  .overlay.open{display:flex;}
+  .modal{
+    background:#fff;
+    width:100%;
+    max-width:480px;
+    border-radius:6px;
+    padding:26px;
+    border:1px solid var(--line-strong);
+  }
+  .modal h2{
+    font-family:var(--serif);
+    font-size:20px;
+    margin:0 0 18px;
+  }
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;
+    font-family:var(--mono);
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    color:#6b6a63;
+    margin-bottom:5px;
+  }
+  .field input, .field textarea, .field select{
+    width:100%;
+    font-family:inherit;
+    font-size:14px;
+    padding:9px 10px;
+    border:1px solid var(--line-strong);
+    border-radius:3px;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  .field textarea{resize:vertical;min-height:64px;}
+  .assignee-toggle{display:flex;gap:8px;}
+  .assignee-toggle button{
+    flex:1;
+    padding:9px;
+    border:1px solid var(--line-strong);
+    background:var(--paper);
+    border-radius:3px;
+    cursor:pointer;
+    font-family:var(--mono);
+    font-size:12px;
+    font-weight:700;
+  }
+  .assignee-toggle button.sel-CO{background:var(--co-bg);color:var(--co);border-color:var(--co);}
+  .assignee-toggle button.sel-Aileen{background:var(--aileen-bg);color:var(--aileen);border-color:var(--aileen);}
+  .assignee-toggle button.sel-HQ{background:var(--hq-bg);color:var(--hq);border-color:var(--hq);}
+  .modal-actions{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:20px;
+  }
+  .modal-actions .left{display:flex;gap:8px;align-items:center;font-family:var(--mono);font-size:12px;color:#6b6a63;}
+  .btn{
+    font-family:var(--mono);
+    font-size:13px;
+    padding:9px 16px;
+    border-radius:3px;
+    cursor:pointer;
+    border:1px solid var(--line-strong);
+    background:#fff;
+  }
+  .btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .btn.cancel{background:transparent;}
+  footer{
+    text-align:center;
+    font-family:var(--mono);
+    font-size:11px;
+    color:#a3a196;
+    padding:20px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Work Tracker</h1>
+    <div class="tagline">Shared board — CO &amp; Aileen assignments</div>
+  </div>
+  <div class="counts">
+    <div><b id="countOpen">0</b>open</div>
+    <div><b id="countOverdue">0</b>overdue</div>
+    <div><b id="countDone">0</b>done</div>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <div class="filters" id="filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="open">Open</button>
+      <button class="filter-btn" data-filter="CO">From CO</button>
+      <button class="filter-btn" data-filter="Aileen">From Aileen</button>
+      <button class="filter-btn" data-filter="HQ">From HQ</button>
+    </div>
+    <button class="add-btn" id="addBtn">+ Add work item</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:30px;"></th>
+        <th data-sort="due" id="dueHeader">Due ▾</th>
+        <th>Work / Info</th>
+        <th>Assigned by</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+  <div id="doneSection" style="margin-top:36px;">
+    <div style="font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:#6b6a63;margin-bottom:10px;border-bottom:1px solid var(--line);padding-bottom:8px;">
+      Completed
+    </div>
+    <table>
+      <tbody id="doneTbody"></tbody>
+    </table>
+  </div>
+</main>
+
+<footer>Data is stored in this browser only. Each device/browser keeps its own list.</footer>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">Add work item</h2>
+    <div class="field">
+      <label>Due date</label>
+      <input type="date" id="fDue">
+      <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-family:inherit;text-transform:none;letter-spacing:normal;font-size:13px;color:var(--ink);">
+        <input type="checkbox" id="fTbc" style="width:auto;">
+        TBC — no due date yet
+      </label>
+    </div>
+    <div class="field">
+      <label>Work</label>
+      <input type="text" id="fWork" placeholder="e.g. Draft Q3 budget summary">
+    </div>
+    <div class="field">
+      <label>Info</label>
+      <textarea id="fInfo" placeholder="Details, links, context..."></textarea>
+    </div>
+    <div class="field">
+      <label>Assigned by</label>
+      <div class="assignee-toggle">
+        <button type="button" id="btnCO">CO</button>
+        <button type="button" id="btnAileen">Aileen</button>
+        <button type="button" id="btnHQ">HQ</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <label class="left"><input type="checkbox" id="fDone" style="margin-right:6px;">Mark done</label>
+      <div style="display:flex;gap:8px;">
+        <button class="btn cancel" id="cancelBtn">Cancel</button>
+        <button class="btn primary" id="saveBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var STORAGE_KEY = 'work_tracker_items_v1';
+  var items = [];
+  var editingId = null;
+  var currentFilter = 'all';
+  var sortKey = 'due';
+  var sortDir = 1;
+
+  function loadItems(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      items = raw ? JSON.parse(raw) : sampleData();
+    }catch(e){
+      items = sampleData();
+    }
+  }
+  function saveItems(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+    catch(e){ /* storage unavailable, continue in-memory */ }
+  }
+  function sampleData(){
+    var today = new Date();
+    function fmt(d){ return d.toISOString().slice(0,10); }
+    var t1 = new Date(today); t1.setDate(t1.getDate()+2);
+    var t2 = new Date(today); t2.setDate(t2.getDate()-1);
+    var t3 = new Date(today); t3.setDate(t3.getDate()+9);
+    return [
+      {id:cryptoId(), due:fmt(t1), work:'Review vendor contract', info:'Check renewal terms before signing.', assignee:'CO', done:false},
+      {id:cryptoId(), due:fmt(t2), work:'Send weekly status update', info:'Include progress on the onboarding project.', assignee:'Aileen', done:false},
+      {id:cryptoId(), due:fmt(t3), work:'Prep slides for town hall', info:'', assignee:'CO', done:false}
+    ];
+  }
+  function cryptoId(){
+    return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8);
+  }
+
+  var tbody = document.getElementById('tbody');
+  var overlay = document.getElementById('overlay');
+  var modalTitle = document.getElementById('modalTitle');
+  var fDue = document.getElementById('fDue');
+  var fTbc = document.getElementById('fTbc');
+  var fWork = document.getElementById('fWork');
+  var fInfo = document.getElementById('fInfo');
+  var fDone = document.getElementById('fDone');
+  var btnCO = document.getElementById('btnCO');
+  var btnAileen = document.getElementById('btnAileen');
+  var btnHQ = document.getElementById('btnHQ');
+  var selectedAssignee = 'CO';
+
+  function daysUntil(dateStr){
+    if(!dateStr) return null;
+    var today = new Date();
+    today.setHours(0,0,0,0);
+    var d = new Date(dateStr + 'T00:00:00');
+    return Math.round((d - today) / 86400000);
+  }
+
+  function render(){
+    var list = items.slice();
+
+    if(currentFilter === 'open') list = list.filter(function(i){return !i.done;});
+    else if(currentFilter === 'done') list = list.filter(function(i){return i.done;});
+    else if(currentFilter === 'CO') list = list.filter(function(i){return i.assignee==='CO' && !i.done;});
+    else if(currentFilter === 'Aileen') list = list.filter(function(i){return i.assignee==='Aileen' && !i.done;});
+    else if(currentFilter === 'HQ') list = list.filter(function(i){return i.assignee==='HQ' && !i.done;});
+
+    list.sort(function(a,b){
+      if(a.done !== b.done) return a.done ? 1 : -1;
+      var av = a.due || '9999', bv = b.due || '9999';
+      if(av<bv) return -1*sortDir;
+      if(av>bv) return 1*sortDir;
+      return 0;
+    });
+
+    tbody.innerHTML = '';
+    if(list.length===0){
+      var tr = document.createElement('tr');
+      tr.className='empty-row';
+      tr.innerHTML = '<td colspan="5">Nothing here. Add a work item to get started.</td>';
+      tbody.appendChild(tr);
+    } else {
+      list.forEach(function(item){
+        var tr = document.createElement('tr');
+        if(item.done) tr.className='done';
+
+        var du = daysUntil(item.due);
+        var badgeClass = 'normal';
+        var badgeText = item.due ? formatDate(item.due) : '—';
+        if(item.tbc){
+          badgeClass = 'tbc';
+          badgeText = 'TBC';
+        } else if(item.due && du !== null && !item.done){
+          var dayLabel;
+          if(du < 0) dayLabel = Math.abs(du) + (Math.abs(du)===1?' day overdue':' days overdue');
+          else if(du === 0) dayLabel = 'due today';
+          else if(du === 1) dayLabel = 'due tomorrow';
+          else dayLabel = 'in ' + du + ' days';
+          badgeText = formatDate(item.due) + ' · ' + dayLabel;
+          if(du < 0) badgeClass = 'overdue';
+          else if(du <= 2) badgeClass = 'soon';
+        }
+
+        tr.innerHTML =
+          '<td><input type="checkbox" class="chk" ' + (item.done?'checked':'') + '></td>' +
+          '<td class="due"><span class="due-badge ' + badgeClass + '">' + badgeText + '</span></td>' +
+          '<td><div class="work-title"></div><div class="info"></div></td>' +
+          '<td class="assignee"><span class="tag ' + item.assignee + '">' + item.assignee + '</span></td>' +
+          '<td class="actions"><button class="editBtn" title="Edit">✎</button><button class="delBtn" title="Delete">✕</button></td>';
+
+        tr.querySelector('.work-title').textContent = item.work;
+        tr.querySelector('.info').textContent = item.info || '';
+
+        tr.querySelector('.chk').addEventListener('change', function(){
+          item.done = this.checked;
+          saveItems();
+          render();
+        });
+        tr.querySelector('.editBtn').addEventListener('click', function(){ openModal(item.id); });
+        tr.querySelector('.delBtn').addEventListener('click', function(){
+          if(confirm('Delete "' + item.work + '"?')){
+            items = items.filter(function(i){return i.id!==item.id;});
+            saveItems();
+            render();
+          }
+        });
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    var open = items.filter(function(i){return !i.done;}).length;
+    var overdue = items.filter(function(i){return !i.done && daysUntil(i.due)!==null && daysUntil(i.due)<0;}).length;
+    var done = items.filter(function(i){return i.done;}).length;
+    document.getElementById('countOpen').textContent = open;
+    document.getElementById('countOverdue').textContent = overdue;
+    document.getElementById('countDone').textContent = done;
+  }
+
+  function formatDate(s){
+    if(!s) return '';
+    var d = new Date(s + 'T00:00:00');
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return months[d.getMonth()] + ' ' + d.getDate();
+  }
+
+  function setAssignee(a){
+    selectedAssignee = a;
+    btnCO.className = a==='CO' ? 'sel-CO' : '';
+    btnAileen.className = a==='Aileen' ? 'sel-Aileen' : '';
+    btnHQ.className = a==='HQ' ? 'sel-HQ' : '';
+  }
+  btnCO.addEventListener('click', function(){ setAssignee('CO'); });
+  btnAileen.addEventListener('click', function(){ setAssignee('Aileen'); });
+  btnHQ.addEventListener('click', function(){ setAssignee('HQ'); });
+
+  fTbc.addEventListener('change', function(){
+    fDue.disabled = this.checked;
+    if(this.checked) fDue.value = '';
+  });
+
+  function openModal(id){
+    editingId = id || null;
+    if(id){
+      var item = items.find(function(i){return i.id===id;});
+      modalTitle.textContent = 'Edit work item';
+      fDue.value = item.due || '';
+      fTbc.checked = !!item.tbc;
+      fDue.disabled = !!item.tbc;
+      fWork.value = item.work || '';
+      fInfo.value = item.info || '';
+      fDone.checked = !!item.done;
+      setAssignee(item.assignee || 'CO');
+    } else {
+      modalTitle.textContent = 'Add work item';
+      fDue.value = '';
+      fTbc.checked = false;
+      fDue.disabled = false;
+      fWork.value = '';
+      fInfo.value = '';
+      fDone.checked = false;
+      setAssignee('CO');
+    }
+    overlay.className = 'overlay open';
+    fWork.focus();
+  }
+  function closeModal(){
+    overlay.className = 'overlay';
+    editingId = null;
+  }
+
+  document.getElementById('addBtn').addEventListener('click', function(){ openModal(null); });
+  document.getElementById('cancelBtn').addEventListener('click', closeModal);
+  overlay.addEventListener('click', function(e){ if(e.target===overlay) closeModal(); });
+
+  document.getElementById('saveBtn').addEventListener('click', function(){
+    if(!fWork.value.trim()){
+      fWork.focus();
+      return;
+    }
+    if(editingId){
+      var item = items.find(function(i){return i.id===editingId;});
+      item.due = fTbc.checked ? '' : fDue.value;
+      item.tbc = fTbc.checked;
+      item.work = fWork.value.trim();
+      item.info = fInfo.value.trim();
+      item.assignee = selectedAssignee;
+      item.done = fDone.checked;
+    } else {
+      items.push({
+        id: cryptoId(),
+        due: fTbc.checked ? '' : fDue.value,
+        tbc: fTbc.checked,
+        work: fWork.value.trim(),
+        info: fInfo.value.trim(),
+        assignee: selectedAssignee,
+        done: fDone.checked
+      });
+    }
+    saveItems();
+    closeModal();
+    render();
+  });
+
+  document.getElementById('filters').addEventListener('click', function(e){
+    if(e.target.classList.contains('filter-btn')){
+      document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
+      e.target.classList.add('active');
+      currentFilter = e.target.getAttribute('data-filter');
+      render();
+    }
+  });
+
+  document.getElementById('dueHeader').addEventListener('click', function(){
+    sortDir *= -1;
+    this.textContent = sortDir === 1 ? 'Due ▾' : 'Due ▴';
+    render();
+  });
+
+  loadItems();
+  render();
+})();
+</script>
+
+</body>
+</html>
